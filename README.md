@@ -84,5 +84,5 @@ Default value: t3.nano
 RootVolumeSize
 Default value: 8
 
-Once when you got [web-server-ec2.yaml](/web-server-ec2.yaml) template executed open Output tab and copy/paste public ip address in your browser, you should see "Hello world" page.
+Once when you got [web-server-ec2.yaml](/web-server-ec2.yaml) template executed open Output tab and copy/paste public ip adress in your browser, you should see "Hello world" page.
 

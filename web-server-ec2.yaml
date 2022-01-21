@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Nigx Web Server'
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+    - Label:
+        default: 'Parent VPC Stack'
+      Parameters:
+      - ParentVPCStack
+    - Label:
+        default: 'Parent Security Group Stack'
+      Parameters:
+      - ParentSecurityGroupStack
+    - Label:
+        default: 'Network Parameters'
+      Parameters:
+      - SubnetName
+    - Label:
+        default: 'EC2 Parameters'
+      Parameters:
+      - Name
+      - InstanceType
+      - RootVolumeSize
+Parameters:
+  ParentVPCStack:
+    Description: 'Stack name of parent VPC stack based on vpc.yaml template.'
+    Type: String
+    Default: "automation-hero-vpc"
+  ParentSecurityGroupStack:
+    Description: 'Stack name of paert Security Group stack based on web-server-security-group.yaml'
+    Type: String
+    Default: "nginx-web-server-security-group"
+  InstanceType:
+    Description: 'The instance type for the EC2 instance.'
+    Type: String
+    Default: 't3.nano'
+  Name:
+    Description: 'The name for the EC2 instance.'
+    Type: String
+    Default: 'niginx-web-server'
+  SubnetName:
+    Description: 'Subnet name of parent VPC stack based on vpc.yaml template.'
+    Type: String
+    Default: SubnetAPublic
+    AllowedValues:
+    - SubnetAPublic
+    - SubnetBPublic
+    - SubnetCPublic
+    - SubnetDPublic
+  RootVolumeSize:
+    Description: 'The root volume size, in Gibibytes (GiB)'
+    Type: Number
+    Default: 8
+    ConstraintDescription: 'Must be in the range [8-1024]'
+    MinValue: 8
+    MaxValue: 1024
+Mappings:
+  RegionAndInstanceTypeToAMIID:
+    eu-north-1:
+      AMI: 'ami-0a654623d21580ce0'
+    ap-south-1:
+      AMI: 'ami-08181691f669ef7d2'
+    eu-west-3:
+      AMI: 'ami-0984c6fda63734a94'
+    eu-west-2:
+      AMI: 'ami-0cf5e24570c2b477b'
+    eu-west-1:
+      AMI: 'ami-096f7a9ab885b50f4'
+    ap-northeast-3:
+      AMI: 'ami-085322a66ec7b6645'
+    ap-northeast-2:
+      AMI: 'ami-0781ede7661c6cd6e'
+    ap-northeast-1:
+      AMI: 'ami-0923d9a4d39b22a91'
+    sa-east-1:
+      AMI: 'ami-050f2383ae3cd4bc2'
+    ca-central-1:
+      AMI: 'ami-094d8d12ac8f29dc4'
+    ap-southeast-1:
+      AMI: 'ami-0a7587d725542cb4d'
+    ap-southeast-2:
+      AMI: 'ami-0c1d83d75982f9cc0'
+    eu-central-1:
+      AMI: 'ami-095e0f8062e0e8216'
+    us-east-1:
+      AMI: 'ami-083602cee93914c0c'
+    us-east-2:
+      AMI: 'ami-066157edddaec5e49'
+    us-west-1:
+      AMI: 'ami-08629b3250aa07841'
+    us-west-2:
+      AMI: 'ami-0ecf760d3d7e1fefa'
+Resources:
+  ElasticIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  NetworkInterface:
+    Type: 'AWS::EC2::NetworkInterface'
+    Properties:
+      GroupSet: 
+        - {'Fn::ImportValue': !Sub '${ParentSecurityGroupStack}-NginxSecurityGroup'}
+      SubnetId: {'Fn::ImportValue': !Sub '${ParentVPCStack}-${SubnetName}'}
+  EIPAssociation:
+    Type: 'AWS::EC2::EIPAssociation'
+    Properties:
+      AllocationId: !GetAtt 'ElasticIP.AllocationId'
+      NetworkInterfaceId: !Ref NetworkInterface
+  NGINXWebServerEC2:
+    DependsOn: EIPAssociation
+    Type: AWS::EC2::Instance
+    Metadata:
+      Comment: Init
+    Properties:
+      ImageId: !FindInMap [RegionAndInstanceTypeToAMIID, !Ref 'AWS::Region', AMI]
+      InstanceType: !Ref InstanceType
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeType: "gp2"
+            DeleteOnTermination: 'true'
+            VolumeSize: !Ref RootVolumeSize
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          NetworkInterfaceId: !Ref NetworkInterface
+      Tags:
+        - Key: "Name"
+          Value: !Ref Name
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -v
+          yum -y update
+          function error_exit
+          {
+            /opt/aws/bin/cfn-signal -e 1 -r \"$1\" !Ref WaitHandle
+            exit 1
+          }
+          # Setup NGINX
+          sudo amazon-linux-extras install nginx1
+          systemctl start nginx
+          systemctl enable nginx
+          echo Hello world >  /usr/share/nginx/html/index.html
+          # All done so signal success
+          /opt/aws/bin/cfn-signal -e 0 -r \"setup completed\" !Ref: WaitHandle
+Outputs:
+  TemplateID:
+    Description: 'NGINX Web Server EC2 instance Cloud Formation template'
+    Value: 'web-server.yaml'
+  StackName:
+    Description: 'Stack name'
+    Value: !Sub '${AWS::StackName}'
+  InstanceId:
+    Description: 'The EC2 instance id.'
+    Value: !Ref NGINXWebServerEC2
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+  PublicIPAddress:
+    Description: 'The public IP address of the EC2 instance.'
+    Value: !Ref ElasticIP
+    Export:
+      Name: !Sub '${AWS::StackName}-IPAddress'

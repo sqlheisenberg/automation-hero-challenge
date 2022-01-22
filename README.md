@@ -51,13 +51,13 @@ You can use another stack name if you want.
 Required parameters: CIDR block for our VPC.  
 
 ### 2. web-server-security-group.yaml  
-Once when we have VPC created, execute [web-server-security-group.yaml](/web-server-security-group.yaml) CloudFormation template to create security group for our NGINX web server EC2 instance.
-Naming convention for VPC stack name is: nginx-web-server-security-group. 
+Once when we have VPC created, execute [web-server-security-group.yaml](/web-server-security-group.yaml) CloudFormation template to create security group for our NGINX web server EC2 instance.  
+Naming convention for web server sercurity group stack name is: `nginx-web-server-security-group`.   
 You can use another stack name if you want.  
 
 **Parameters:**  
 Name of VPC stack
-Default value: automation-hero-vpc
+Default value: `automation-hero-vpc`
 
 ### 3. web-server-ec2.yaml  
 Last step is to create EC2 instance for our NGINX web server. To do that execute [web-server-ec2.yaml](/web-server-ec2.yaml) CloudFormation template. 
@@ -65,24 +65,23 @@ Naming convention for VPC stack name is: nginx-web-server
 
 **Parameters:**  
 Parent VPC stack
-Default value: automation-hero-vpc
+Default value: `automation-hero-vpc`
 
 Parent Security Group Stack
+Default value: `nginx-web-server-security-group`  
 
-Network Parameters  
+**Network Parameters**   
 Subnet  
-Default value: PublicASubnet
+Default value: `PublicASubnet`
 
-EC2 Parameters
-
+**EC2 Parameters**  
 Name
-Default value: nignx-web-server
-
-InstanceType
-Default value: t3.nano
+Default value: `nignx-web-server`  
+InstanceType  
+Default value: `t3.nano`
 
 RootVolumeSize
-Default value: 8
+Default value: `8`
 
-Once when you got [web-server-ec2.yaml](/web-server-ec2.yaml) template executed open Output tab and copy/paste public ip adress in your browser, you should see "Hello world" page.
+Once when you got [web-server-ec2.yaml](/web-server-ec2.yaml) template executed, open Output tab inside AWS Console and copy/paste public ip adress in your browser, you will get "Hello world" page.
 
